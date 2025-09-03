@@ -32,9 +32,9 @@ const UinputConnection = struct {
         const setup: c.struct_uinput_setup = .{
             .name = zeroPadded(80, "libautomate virtual input device"),
             .id = .{
-                .bustype = c.BUS_USB,
-                .vendor = 0x1234,
-                .product = 0x5678,
+                .bustype = c.BUS_VIRTUAL,
+                .vendor = 0xC7A0,
+                .product = 0x0000,
             },
         };
 
