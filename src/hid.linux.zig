@@ -24,12 +24,12 @@ const UinputConnection = struct {
     pub fn init() !UinputConnection {
         const file = try std.fs.openFileAbsolute("/dev/uinput", .{ .mode = .write_only });
 
-        _ = c.ioctl(file.handle, c.UI_SET_EVBIT, c.EV_KEY);
+        try ioctl(file, c.UI_SET_EVBIT, c.EV_KEY);
 
         for (c.KEY_ESC..c.KEY_KPDOT) |key| { // TODO: KEY_KPDOT is a temporary upper bound, we should explicitly declare which keys are to be enabled instead of iterating over enum values.
-            _ = c.ioctl(file.handle, c.UI_SET_KEYBIT, key);
+            try ioctl(file, c.UI_SET_KEYBIT, key);
         }
-        const setup: c.struct_uinput_setup = .{
+        const setup: c.uinput_setup = .{
             .name = zeroPadded(80, "libautomate virtual input device"),
             .id = .{
                 .bustype = c.BUS_VIRTUAL,
@@ -38,8 +38,8 @@ const UinputConnection = struct {
             },
         };
 
-        _ = c.ioctl(file.handle, c.UI_DEV_SETUP, &setup);
-        _ = c.ioctl(file.handle, c.UI_DEV_CREATE);
+        try ioctl(file, c.UI_DEV_SETUP, &setup);
+        try ioctl(file, c.UI_DEV_CREATE, undefined);
 
         return .{
             .file = file,
@@ -48,7 +48,7 @@ const UinputConnection = struct {
     }
 
     pub fn deinit(this: UinputConnection) void {
-        c.ioctl(this.file.handle, c.UI_DEV_DESTROY);
+        try ioctl(this.file, c.UI_DEV_DESTROY, undefined);
         this.file.close();
     }
 
@@ -59,6 +59,15 @@ const UinputConnection = struct {
             try this.release(event.input);
         }
         try this.report();
+    }
+
+    // TODO: Improve/diversify error handling and improve error messages.
+    fn ioctl(file: std.fs.File, request: u32, arg: anytype) !void {
+        const result = if (@TypeOf(arg) == @TypeOf(undefined)) c.ioctl(file.handle, request) else c.ioctl(file.handle, request, arg);
+        switch (std.posix.errno(result)) {
+            .SUCCESS => return,
+            else => |e| return std.posix.unexpectedErrno(e),
+        }
     }
 
     fn press(this: *UinputConnection, input: Input) !void {
