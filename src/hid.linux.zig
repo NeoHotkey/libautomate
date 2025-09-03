@@ -86,12 +86,12 @@ const UinputConnection = struct {
         try this.file.writeAll(&@as([@sizeOf(c.struct_input_event)]u8, @bitCast(event)));
     }
 
-    // Sleep 10ms at a time until it's been 1 second since init.
+    // Spin loop until we can be (reasonably) sure that our inputs will go through.
     // This is a stupid hack to account for the time it takes userspace to register the device, during which events are dropped silently.
     // TODO: Investigate if device registration can be queried cleanly instead.
     // See https://www.kernel.org/doc/html/v6.9/input/uinput.html?highlight=sleep#keyboard-events
     fn waitUntilReady(this: *UinputConnection) void {
-        while (this.timer.read() < 1 * std.time.ns_per_s) {
+        while (this.timer.read() < 250 * std.time.ns_per_ms) { // NOTE: 250ms works well on my machine but may need to be increased for compatibility.
             std.Thread.sleep(10 * std.time.ns_per_ms);
         }
     }
