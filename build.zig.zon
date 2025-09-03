@@ -1,0 +1,13 @@
+.{
+    .name = .libautomate,
+    .version = "0.0.0",
+    .fingerprint = 0xb13c648550d9bdf0,
+    .minimum_zig_version = "0.14.0",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src/",
+        "license.md",
+        "readme.md",
+    },
+}
