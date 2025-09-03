@@ -1,7 +1,5 @@
 const std = @import("std");
-const uinput = @cImport(
-    @cInclude("linux/uinput.h"),
-);
+const c = @import("c.zig");
 const Input = @import("Input.zig").Input;
 const InputEvent = @import("InputEvent.zig").InputEvent;
 
@@ -26,22 +24,22 @@ const UinputConnection = struct {
     pub fn init() !UinputConnection {
         const file = try std.fs.openFileAbsolute("/dev/uinput", .{ .mode = .write_only });
 
-        _ = uinput.ioctl(file.handle, uinput.UI_SET_EVBIT, uinput.EV_KEY);
+        _ = c.ioctl(file.handle, c.UI_SET_EVBIT, c.EV_KEY);
 
-        for (uinput.KEY_ESC..uinput.KEY_KPDOT) |key| { // TODO: KEY_KPDOT is a temporary upper bound, we should explicitly declare which keys are to be enabled instead of iterating over enum values.
-            _ = uinput.ioctl(file.handle, uinput.UI_SET_KEYBIT, key);
+        for (c.KEY_ESC..c.KEY_KPDOT) |key| { // TODO: KEY_KPDOT is a temporary upper bound, we should explicitly declare which keys are to be enabled instead of iterating over enum values.
+            _ = c.ioctl(file.handle, c.UI_SET_KEYBIT, key);
         }
-        const setup: uinput.struct_uinput_setup = .{
+        const setup: c.struct_uinput_setup = .{
             .name = zeroPadded(80, "libautomate virtual input device"),
             .id = .{
-                .bustype = uinput.BUS_USB,
+                .bustype = c.BUS_USB,
                 .vendor = 0x1234,
                 .product = 0x5678,
             },
         };
 
-        _ = uinput.ioctl(file.handle, uinput.UI_DEV_SETUP, &setup);
-        _ = uinput.ioctl(file.handle, uinput.UI_DEV_CREATE);
+        _ = c.ioctl(file.handle, c.UI_DEV_SETUP, &setup);
+        _ = c.ioctl(file.handle, c.UI_DEV_CREATE);
 
         return .{
             .file = file,
@@ -50,7 +48,7 @@ const UinputConnection = struct {
     }
 
     pub fn deinit(this: UinputConnection) void {
-        uinput.ioctl(this.file.handle, uinput.UI_DEV_DESTROY);
+        c.ioctl(this.file.handle, c.UI_DEV_DESTROY);
         this.file.close();
     }
 
@@ -64,28 +62,28 @@ const UinputConnection = struct {
     }
 
     fn press(this: *UinputConnection, input: Input) !void {
-        try this.emit(uinput.EV_KEY, inputToKeycode(input), 1);
+        try this.emit(c.EV_KEY, inputToKeycode(input), 1);
     }
 
     fn release(this: *UinputConnection, input: Input) !void {
-        try this.emit(uinput.EV_KEY, inputToKeycode(input), 0);
+        try this.emit(c.EV_KEY, inputToKeycode(input), 0);
     }
 
     fn report(this: *UinputConnection) !void {
-        try this.emit(uinput.EV_SYN, uinput.SYN_REPORT, 0);
+        try this.emit(c.EV_SYN, c.SYN_REPORT, 0);
     }
 
     fn emit(this: *UinputConnection, event_type: c_ushort, code: c_ushort, value: c_int) !void {
         this.waitUntilReady();
 
-        const event: uinput.struct_input_event = .{
+        const event: c.struct_input_event = .{
             .type = event_type,
             .code = code,
             .value = value,
             .time = undefined, // field seems to be ignored entirely.
         };
 
-        try this.file.writeAll(&@as([@sizeOf(uinput.struct_input_event)]u8, @bitCast(event)));
+        try this.file.writeAll(&@as([@sizeOf(c.struct_input_event)]u8, @bitCast(event)));
     }
 
     // Sleep 10ms at a time until it's been 1 second since init.
@@ -109,41 +107,41 @@ fn zeroPadded(comptime length: usize, comptime source: []const u8) [length]u8 {
 
 fn inputToKeycode(input: Input) c_ushort {
     return switch (input) {
-        .a => uinput.KEY_A,
-        .b => uinput.KEY_B,
-        .c => uinput.KEY_C,
-        .d => uinput.KEY_D,
-        .e => uinput.KEY_E,
-        .f => uinput.KEY_F,
-        .g => uinput.KEY_G,
-        .h => uinput.KEY_H,
-        .i => uinput.KEY_I,
-        .j => uinput.KEY_J,
-        .k => uinput.KEY_K,
-        .l => uinput.KEY_L,
-        .m => uinput.KEY_M,
-        .n => uinput.KEY_N,
-        .o => uinput.KEY_O,
-        .p => uinput.KEY_P,
-        .q => uinput.KEY_Q,
-        .r => uinput.KEY_R,
-        .s => uinput.KEY_S,
-        .t => uinput.KEY_T,
-        .u => uinput.KEY_U,
-        .v => uinput.KEY_V,
-        .w => uinput.KEY_W,
-        .x => uinput.KEY_X,
-        .y => uinput.KEY_Y,
-        .z => uinput.KEY_Z,
-        .zero => uinput.KEY_0,
-        .one => uinput.KEY_1,
-        .two => uinput.KEY_2,
-        .three => uinput.KEY_3,
-        .four => uinput.KEY_4,
-        .five => uinput.KEY_5,
-        .six => uinput.KEY_6,
-        .seven => uinput.KEY_7,
-        .eight => uinput.KEY_8,
-        .nine => uinput.KEY_9,
+        .a => c.KEY_A,
+        .b => c.KEY_B,
+        .c => c.KEY_C,
+        .d => c.KEY_D,
+        .e => c.KEY_E,
+        .f => c.KEY_F,
+        .g => c.KEY_G,
+        .h => c.KEY_H,
+        .i => c.KEY_I,
+        .j => c.KEY_J,
+        .k => c.KEY_K,
+        .l => c.KEY_L,
+        .m => c.KEY_M,
+        .n => c.KEY_N,
+        .o => c.KEY_O,
+        .p => c.KEY_P,
+        .q => c.KEY_Q,
+        .r => c.KEY_R,
+        .s => c.KEY_S,
+        .t => c.KEY_T,
+        .u => c.KEY_U,
+        .v => c.KEY_V,
+        .w => c.KEY_W,
+        .x => c.KEY_X,
+        .y => c.KEY_Y,
+        .z => c.KEY_Z,
+        .zero => c.KEY_0,
+        .one => c.KEY_1,
+        .two => c.KEY_2,
+        .three => c.KEY_3,
+        .four => c.KEY_4,
+        .five => c.KEY_5,
+        .six => c.KEY_6,
+        .seven => c.KEY_7,
+        .eight => c.KEY_8,
+        .nine => c.KEY_9,
     };
 }
