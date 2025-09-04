@@ -26,9 +26,8 @@ const UinputConnection = struct {
 
         try ioctl(file, c.UI_SET_EVBIT, c.EV_KEY);
 
-        for (c.KEY_ESC..c.KEY_KPDOT) |key| { // TODO: KEY_KPDOT is a temporary upper bound, we should explicitly declare which keys are to be enabled instead of iterating over enum values.
-            try ioctl(file, c.UI_SET_KEYBIT, key);
-        }
+        for (c.KEY_ESC..c.KEY_MAX) |key| try ioctl(file, c.UI_SET_KEYBIT, key);
+
         const setup: c.uinput_setup = .{
             .name = zeroPadded(80, "libautomate virtual input device"),
             .id = .{
