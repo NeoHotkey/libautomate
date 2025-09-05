@@ -25,6 +25,8 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(static_lib);
     b.installArtifact(dynamic_lib);
 
+    mod.addIncludePath(addWaylandProtocol(b, "virtual-keyboard-unstable-v1").dirname());
+
     const example_exe = b.addExecutable(.{
         .name = "example",
         .root_source_file = b.path("example/main.zig"),
@@ -48,4 +50,11 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
+}
+
+fn addWaylandProtocol(b: *std.Build, comptime name: []const u8) std.Build.LazyPath {
+    const generate = b.addSystemCommand(&.{ "wayland-scanner", "client-header" });
+
+    generate.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
+    return generate.addOutputFileArg(name ++ "-client-protocol.h");
 }
