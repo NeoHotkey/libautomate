@@ -2,10 +2,15 @@ const std = @import("std");
 const c = @import("c.zig");
 const Input = @import("Input.zig").Input;
 const InputEvent = @import("InputEvent.zig").InputEvent;
+const display_manager = @import("linux/display_manager.zig");
 
 var uinput: ?UinputConnection = null;
 
 pub fn init() !void {
+    const dm = try display_manager.getCurrent();
+
+    std.log.debug("Current display manager: {any}", .{dm});
+
     uinput = try .init();
 }
 
