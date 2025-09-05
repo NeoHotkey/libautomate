@@ -3,18 +3,18 @@ const c = @import("c.zig");
 const Input = @import("Input.zig").Input;
 const InputEvent = @import("InputEvent.zig").InputEvent;
 
-var connection: ?UinputConnection = null;
+var uinput: ?UinputConnection = null;
 
 pub fn init() !void {
-    connection = try .init();
+    uinput = try .init();
 }
 
 pub fn deinit() void {
-    connection.?.deinit();
+    if (uinput) |it| it.deinit();
 }
 
 pub fn sendEvent(event: InputEvent) !void {
-    try connection.?.sendEvent(event);
+    try uinput.?.sendEvent(event);
 }
 
 const UinputConnection = struct {
