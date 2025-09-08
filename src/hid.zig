@@ -1,15 +1,11 @@
 const builtin = @import("builtin");
 
-const linux = @import("hid.linux.zig");
-const windows = @import("hid.windows.zig");
-const macos = @import("hid.macos.zig");
-
 pub const InputEvent = @import("InputEvent.zig").InputEvent;
 
 const backend = switch (builtin.target.os.tag) {
-    .linux => linux,
-    .windows => windows,
-    .macos => macos,
+    .linux => @import("linux/hid.zig"),
+    .windows => @import("windows/hid.zig"),
+    .macos => @import("macos/hid.zig"),
     else => @compileError("Target unsupported."),
 };
 

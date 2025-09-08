@@ -1,7 +1,7 @@
 const std = @import("std");
-const c = @import("c.zig");
-const Input = @import("Input.zig").Input;
-const InputEvent = @import("InputEvent.zig").InputEvent;
+const c = @import("../c.zig");
+const Input = @import("../Input.zig").Input;
+const InputEvent = @import("../InputEvent.zig").InputEvent;
 
 var uinput: ?UinputConnection = null;
 var wayland: ?WaylandConnection = null;

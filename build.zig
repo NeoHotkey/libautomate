@@ -30,6 +30,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(dynamic_lib);
 
     addWaylandProtocol(mod, "virtual-keyboard-unstable-v1");
+    addWaylandProtocol(mod, "input-method-unstable-v2");
 
     const example_exe = b.addExecutable(.{
         .name = "example",
