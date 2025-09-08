@@ -3,6 +3,7 @@
 pub usingnamespace @cImport({
     @cInclude("linux/uinput.h");
     @cInclude("wayland-client.h");
+    @cInclude("xkbcommon/xkbcommon.h");
     @cInclude("X11/Xlib.h");
     @cInclude("virtual-keyboard-unstable-v1-client-protocol.h");
 });

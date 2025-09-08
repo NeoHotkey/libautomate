@@ -10,6 +10,10 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    mod.linkSystemLibrary("wayland-client", .{});
+    mod.linkSystemLibrary("X11", .{});
+    mod.linkSystemLibrary("xkbcommon", .{});
+
     const static_lib = b.addLibrary(.{
         .linkage = .static,
         .name = "automate",
@@ -25,7 +29,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(static_lib);
     b.installArtifact(dynamic_lib);
 
-    mod.addIncludePath(addWaylandProtocol(b, "virtual-keyboard-unstable-v1").dirname());
+    addWaylandProtocol(mod, "virtual-keyboard-unstable-v1");
 
     const example_exe = b.addExecutable(.{
         .name = "example",
@@ -52,9 +56,17 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_unit_tests.step);
 }
 
-fn addWaylandProtocol(b: *std.Build, comptime name: []const u8) std.Build.LazyPath {
-    const generate = b.addSystemCommand(&.{ "wayland-scanner", "client-header" });
+fn addWaylandProtocol(mod: *std.Build.Module, comptime name: []const u8) void {
+    const b = mod.owner;
 
-    generate.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
-    return generate.addOutputFileArg(name ++ "-client-protocol.h");
+    const generate_header = b.addSystemCommand(&.{ "wayland-scanner", "client-header" });
+    generate_header.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
+    const header = generate_header.addOutputFileArg(name ++ "-client-protocol.h");
+
+    const generate_source = b.addSystemCommand(&.{ "wayland-scanner", "private-code" });
+    generate_source.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
+    const source = generate_source.addOutputFileArg(name ++ "-client-protocol.c");
+
+    mod.addIncludePath(header.dirname());
+    mod.addCSourceFile(.{ .file = source, .language = .c });
 }

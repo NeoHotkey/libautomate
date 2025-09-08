@@ -23,4 +23,6 @@ pub fn main() !void {
         .input = .i,
         .is_down = false,
     });
+
+    try automate.hid.typeCharacter('y');
 }

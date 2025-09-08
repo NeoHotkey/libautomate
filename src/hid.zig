@@ -24,3 +24,7 @@ pub fn deinit() void {
 pub fn sendEvent(event: InputEvent) !void {
     return backend.sendEvent(event);
 }
+
+pub fn typeCharacter(char: u21) !void {
+    return backend.typeCharacter(char);
+}
