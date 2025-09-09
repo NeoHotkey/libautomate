@@ -1,7 +1,13 @@
 const std = @import("std");
-const c = @import("../c.zig");
 const Input = @import("../Input.zig").Input;
 const InputEvent = @import("../InputEvent.zig").InputEvent;
+const c = @cImport({
+    @cInclude("linux/uinput.h");
+    @cInclude("wayland-client.h");
+    @cInclude("xkbcommon/xkbcommon.h");
+    @cInclude("X11/Xlib.h");
+    @cInclude("virtual-keyboard-unstable-v1-client-protocol.h");
+});
 
 var uinput: ?UinputConnection = null;
 var wayland: ?WaylandConnection = null;
