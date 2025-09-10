@@ -7,6 +7,7 @@ const c = @cImport({
     @cInclude("xkbcommon/xkbcommon.h");
     @cInclude("X11/Xlib.h");
     @cInclude("virtual-keyboard-unstable-v1-client-protocol.h");
+    @cInclude("input-method-unstable-v2-client-protocol.h");
 });
 
 var uinput: ?UinputConnection = null;
@@ -18,7 +19,6 @@ pub fn init() !void {
         .wayland => {
             wayland = WaylandConnection.init() catch |e| switch (e) {
                 error.CouldNotConnectToDisplay => continue :sw .x,
-                error.VirtualKeyboardProtocolUnsupported => continue :sw .unknown,
                 else => return e,
             };
         },
@@ -195,12 +195,15 @@ const UinputConnection = struct {
     }
 };
 
+// TODO: Refactor. This struct has too many reponsibilities.
 const WaylandConnection = struct {
     display: *c.wl_display,
     registry: *c.wl_registry,
     seat: ?*c.wl_seat = null,
     keyboard_manager: ?*c.zwp_virtual_keyboard_manager_v1 = null,
     keyboard: ?*c.zwp_virtual_keyboard_v1 = null,
+    input_method_manager: ?*c.zwp_input_method_manager_v2 = null,
+    input_method: ?*c.zwp_input_method_v2 = null,
 
     pub fn init() !WaylandConnection {
         const display = c.wl_display_connect(null) orelse return error.CouldNotConnectToDisplay;
@@ -213,14 +216,19 @@ const WaylandConnection = struct {
         if (c.wl_display_roundtrip(this.display) < 0) return error.CouldNotRoundtrip;
 
         if (this.seat == null) return error.NoSeat;
-        if (this.keyboard_manager == null) return error.VirtualKeyboardProtocolUnsupported;
-
-        this.keyboard = c.zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(this.keyboard_manager, this.seat) orelse return error.CouldNotCreateVirtualKeyboard;
+        if (this.keyboard_manager) |keyboard_manager| {
+            this.keyboard = c.zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(keyboard_manager, this.seat) orelse return error.CouldNotCreateVirtualKeyboard;
+        }
+        if (this.input_method_manager) |input_method_manager| {
+            this.input_method = c.zwp_input_method_manager_v2_get_input_method(input_method_manager, this.seat) orelse return error.CouldNotCreateInputMethod;
+        }
 
         return this;
     }
 
     pub fn deinit(this: @This()) void {
+        if (this.input_method) |it| c.zwp_input_method_v2_destroy(it);
+        if (this.input_method_manager) |it| c.zwp_input_method_manager_v2_destroy(it);
         if (this.keyboard) |it| c.zwp_virtual_keyboard_v1_destroy(it);
         if (this.keyboard_manager) |it| c.zwp_virtual_keyboard_manager_v1_destroy(it);
         if (this.seat) |it| c.wl_seat_destroy(it);
@@ -234,9 +242,10 @@ const WaylandConnection = struct {
     }
 
     pub fn typeCharacter(this: @This(), char: u21) !void {
-        _ = this;
         const keycode = charToKeycode(char);
         std.log.debug("Going to send keycode {?d}.", .{keycode});
+        if (this.keyboard != null) std.log.debug("Keyboard is active.", .{});
+        if (this.input_method != null) std.log.debug("Input Method is active.", .{});
     }
 
     const registry_listener: c.wl_registry_listener = .{
@@ -247,11 +256,15 @@ const WaylandConnection = struct {
     fn handleWaylandEvent(data: ?*anyopaque, reg: ?*c.wl_registry, name: u32, interface: [*c]const u8, version: u32) callconv(.c) void {
         const this: *@This() = @ptrCast(@alignCast(data.?));
 
+        const interface_name = std.mem.span(interface);
+
         // TODO: this iterates over both strings twice. Could be optimized.
-        if (std.mem.eql(u8, std.mem.span(interface), std.mem.span(c.wl_seat_interface.name))) {
+        if (std.mem.eql(u8, interface_name, std.mem.span(c.wl_seat_interface.name))) {
             this.seat = @ptrCast(@alignCast(c.wl_registry_bind(reg, name, &c.wl_seat_interface, @min(version, 7))));
-        } else if (std.mem.eql(u8, std.mem.span(interface), std.mem.span(c.zwp_virtual_keyboard_manager_v1_interface.name))) {
+        } else if (std.mem.eql(u8, interface_name, std.mem.span(c.zwp_virtual_keyboard_manager_v1_interface.name))) {
             this.keyboard_manager = @ptrCast(@alignCast(c.wl_registry_bind(reg, name, &c.zwp_virtual_keyboard_manager_v1_interface, 1)));
+        } else if (std.mem.eql(u8, interface_name, std.mem.span(c.zwp_input_method_manager_v2_interface.name))) {
+            this.input_method_manager = @ptrCast(@alignCast(c.wl_registry_bind(reg, name, &c.zwp_input_method_manager_v2_interface, 1)));
         }
     }
 
