@@ -24,7 +24,7 @@ pub const InputMethod = struct {
     }
 
     pub fn typeCharacter(this: InputMethod, char: u21) !void {
-        var string: [5]u8 = "\x00" ** 5;
+        var string: [5]u8 = [_]u8{0} ** 5;
         const len = try std.unicode.wtf8Encode(char, &string);
 
         c.zwp_input_method_v2_commit_string(this.input_method, string[0..len].ptr);
