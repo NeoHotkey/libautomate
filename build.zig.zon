@@ -1,6 +1,12 @@
 .{
     .name = .libautomate,
     .version = "0.0.0",
+    .dependencies = .{
+        .wayland = .{
+            .url = "https://codeberg.org/ifreund/zig-wayland/archive/v0.3.0.tar.gz",
+            .hash = "wayland-0.3.0-lQa1kjPIAQDmhGYpY-zxiRzQJFHQ2VqhJkQLbKKdt5wl",
+        },
+    },
     .fingerprint = 0xb13c648550d9bdf0,
     .minimum_zig_version = "0.14.0",
     .paths = .{

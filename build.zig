@@ -1,4 +1,5 @@
 const std = @import("std");
+const wayland = @import("wayland");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -13,6 +14,16 @@ pub fn build(b: *std.Build) void {
     mod.linkSystemLibrary("wayland-client", .{});
     mod.linkSystemLibrary("X11", .{});
     mod.linkSystemLibrary("xkbcommon", .{});
+
+    const scanner: *wayland.Scanner = .create(b, .{});
+    mod.addImport("wayland", b.createModule(.{ .root_source_file = scanner.result }));
+
+    scanner.addCustomProtocol(b.path("wayland-protocols/virtual-keyboard-unstable-v1.xml"));
+    scanner.addCustomProtocol(b.path("wayland-protocols/input-method-unstable-v2.xml"));
+
+    scanner.generate("wl_seat", 7);
+    scanner.generate("zwp_virtual_keyboard_manager_v1", 1);
+    scanner.generate("zwp_input_method_manager_v2", 1);
 
     const static_lib = b.addLibrary(.{
         .linkage = .static,

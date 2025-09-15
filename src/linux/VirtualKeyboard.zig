@@ -1,35 +1,39 @@
 const std = @import("std");
-const c = @import("c.zig").defs;
+const wl = @import("wayland").client.wl;
+const zwp = @import("wayland").client.zwp;
 const Wayland = @import("Wayland.zig").Wayland;
+const c = @cImport({
+    @cInclude("xkbcommon/xkbcommon.h");
+});
 
 pub const VirtualKeyboard = struct {
     wayland: *const Wayland,
-    keyboard: *c.zwp_virtual_keyboard_v1,
+    keyboard: *zwp.VirtualKeyboardV1,
 
     pub fn init(wayland: *const Wayland) !VirtualKeyboard {
-        const seat = try wayland.register(c.wl_seat, &c.wl_seat_interface, .{ .min = 1, .max = 7 });
-        defer c.wl_seat_destroy(seat);
+        const seat = try wayland.register(wl.Seat, wl.Seat.interface, 7);
+        defer seat.destroy();
 
-        const manager = try wayland.register(c.zwp_virtual_keyboard_manager_v1, &c.zwp_virtual_keyboard_manager_v1_interface, .{ .min = 1, .max = 1 });
-        defer c.zwp_virtual_keyboard_manager_v1_destroy(manager);
+        const manager = try wayland.register(zwp.VirtualKeyboardManagerV1, zwp.VirtualKeyboardManagerV1.interface, 1);
+        defer manager.destroy();
 
         return VirtualKeyboard{
             .wayland = wayland,
-            .keyboard = c.zwp_virtual_keyboard_manager_v1_create_virtual_keyboard(manager, seat) orelse return error.FailedToCreateKeyboard,
+            .keyboard = try manager.createVirtualKeyboard(seat),
         };
     }
 
     pub fn deinit(this: VirtualKeyboard) void {
-        c.zwp_virtual_keyboard_v1_destroy(this.keyboard);
+        this.keyboard.destroy();
     }
 
     pub fn typeCharacter(this: VirtualKeyboard, char: u21) !void {
         const keycode = charToKeycode(char) orelse return error.KeycodeNotFound;
 
-        c.zwp_virtual_keyboard_v1_key(this.keyboard, 0, keycode, c.WL_KEYBOARD_KEY_STATE_PRESSED);
+        this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.pressed));
         try this.wayland.roundtrip();
 
-        c.zwp_virtual_keyboard_v1_key(this.keyboard, 0, keycode, c.WL_KEYBOARD_KEY_STATE_RELEASED);
+        this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.released));
         try this.wayland.roundtrip();
     }
 

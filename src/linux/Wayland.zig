@@ -1,61 +1,74 @@
 const std = @import("std");
-const c = @import("c.zig").defs;
+const wl = @import("wayland").client.wl;
 
 pub const Wayland = struct {
-    display: *c.wl_display,
+    display: *wl.Display,
 
     pub fn init() !Wayland {
         return Wayland{
-            .display = c.wl_display_connect(null) orelse return error.FailedToConnect,
+            .display = try wl.Display.connect(null),
         };
     }
 
     pub fn deinit(this: Wayland) void {
-        c.wl_display_disconnect(this.display);
+        this.display.disconnect();
     }
 
-    pub fn register(this: Wayland, Protocol: type, interface: *const c.wl_interface, version: struct { min: u32, max: u32 }) !*Protocol {
-        const registry = c.wl_display_get_registry(this.display) orelse return error.FailedToGetRegistry;
-        defer c.wl_registry_destroy(registry);
+    pub fn register(this: Wayland, Protocol: type, interface: *const wl.Interface, max_version: u32) !*Protocol {
+        const registry = try this.display.getRegistry();
+        defer registry.destroy();
 
-        var request: RegistryRequest = .{
+        var request: RegistryRequest(Protocol) = .{
             .interface = interface,
-            .min_version = version.min,
-            .max_version = version.max,
+            .max_version = max_version,
         };
 
-        if (c.wl_registry_add_listener(registry, &registry_listener, &request) < 0) return error.FailedToRegister;
+        registry.setListener(*RegistryRequest(Protocol), getHandler(Protocol), &request);
         // TODO: is dispatch required?
-        if (c.wl_display_dispatch(this.display) < 0) return error.FailedDispatch;
+        try this.dispatch();
         try this.roundtrip();
 
-        if (request.protocol) |result| {
-            return @ptrCast(@alignCast(result));
+        if (request.protocol) |proto| {
+            return proto;
         } else {
             return error.ProtocolUnsupported;
         }
     }
 
-    pub fn roundtrip(this: Wayland) !void {
-        if (c.wl_display_roundtrip(this.display) < 0) return error.FailedRoundtrip;
-    }
-
-    const registry_listener: c.wl_registry_listener = .{
-        .global = &handleGlobal,
-    };
-
-    fn handleGlobal(data: ?*anyopaque, registry: ?*c.wl_registry, name: u32, interface_name: [*c]const u8, version: u32) callconv(.c) void {
-        const request: *RegistryRequest = @ptrCast(@alignCast(data));
-
-        if (std.mem.eql(u8, std.mem.span(interface_name), std.mem.span(request.interface.name))) {
-            request.protocol = c.wl_registry_bind(registry, name, request.interface, @max(@min(version, request.max_version), request.min_version));
+    pub fn dispatch(this: Wayland) !void {
+        switch (this.display.dispatch()) {
+            .SUCCESS => return,
+            else => return error.DispatchFailed,
         }
     }
 
-    const RegistryRequest = struct {
-        interface: *const c.wl_interface,
-        min_version: u32,
-        max_version: u32,
-        protocol: ?*anyopaque = null,
-    };
+    pub fn roundtrip(this: Wayland) !void {
+        switch (this.display.roundtrip()) {
+            .SUCCESS => return,
+            else => return error.RoundtripFailed,
+        }
+    }
+
+    fn getHandler(Protocol: type) *const fn (registry: *wl.Registry, event: wl.Registry.Event, data: *RegistryRequest(Protocol)) void {
+        return struct {
+            pub fn handleRegistryEvent(registry: *wl.Registry, event: wl.Registry.Event, request: *RegistryRequest(Protocol)) void {
+                switch (event) {
+                    .global => |ev| {
+                        if (std.mem.eql(u8, std.mem.span(ev.interface), std.mem.span(request.interface.name))) {
+                            request.protocol = registry.bind(ev.name, Protocol, @min(request.max_version, ev.version)) catch null;
+                        }
+                    },
+                    else => {},
+                }
+            }
+        }.handleRegistryEvent;
+    }
+
+    fn RegistryRequest(Protocol: type) type {
+        return struct {
+            interface: *const wl.Interface,
+            max_version: u32,
+            protocol: ?*Protocol = null,
+        };
+    }
 };

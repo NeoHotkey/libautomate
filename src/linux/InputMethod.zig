@@ -1,33 +1,34 @@
 const std = @import("std");
-const c = @import("c.zig").defs;
+const wl = @import("wayland").client.wl;
+const zwp = @import("wayland").client.zwp;
 const Wayland = @import("Wayland.zig").Wayland;
 
 pub const InputMethod = struct {
     wayland: *const Wayland,
-    input_method: *c.zwp_input_method_v2,
+    input_method: *zwp.InputMethodV2,
 
     pub fn init(wayland: *const Wayland) !InputMethod {
-        const seat = try wayland.register(c.wl_seat, &c.wl_seat_interface, .{ .min = 1, .max = 7 });
-        defer c.wl_seat_destroy(seat);
+        const seat = try wayland.register(wl.Seat, wl.Seat.interface, 7);
+        defer seat.destroy();
 
-        const manager = try wayland.register(c.zwp_input_method_manager_v2, &c.zwp_input_method_manager_v2_interface, .{ .min = 1, .max = 1 });
-        defer c.zwp_input_method_manager_v2_destroy(manager);
+        const manager = try wayland.register(zwp.InputMethodManagerV2, zwp.InputMethodManagerV2.interface, 1);
+        defer manager.destroy();
 
         return InputMethod{
             .wayland = wayland,
-            .input_method = c.zwp_input_method_manager_v2_get_input_method(manager, seat) orelse return error.FailedToGetInputMethod,
+            .input_method = try manager.getInputMethod(seat),
         };
     }
 
     pub fn deinit(this: InputMethod) void {
-        c.zwp_input_method_v2_destroy(this.input_method);
+        this.input_method.destroy();
     }
 
     pub fn typeCharacter(this: InputMethod, char: u21) !void {
-        var string: [5]u8 = [_]u8{0} ** 5;
+        var string: [4:0]u8 = [4:0]u8{ 0, 0, 0, 0 };
         const len = try std.unicode.wtf8Encode(char, &string);
 
-        c.zwp_input_method_v2_commit_string(this.input_method, string[0..len].ptr);
-        c.zwp_input_method_v2_commit(this.input_method, 0);
+        this.input_method.commitString(@ptrCast(string[0..len]));
+        this.input_method.commit(0);
     }
 };
