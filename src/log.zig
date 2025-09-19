@@ -18,7 +18,7 @@ pub var writer: std.io.AnyWriter = std.io.getStdErr().writer().any();
 pub fn enter(comptime src: std.builtin.SourceLocation) void {
     if (comptime !enable_tracing) return;
 
-    indent(writer);
+    indentConnected(writer);
     std.fmt.format(writer, "[trace] {s} {{\n", .{Location.from(src).fmt()}) catch {};
 
     indent_size += 1;
@@ -29,7 +29,7 @@ pub fn exit() void {
 
     indent_size -= 1;
 
-    indent(writer);
+    indentDisconnected(writer);
     std.fmt.format(writer, "}}\n", .{}) catch {};
 }
 
@@ -52,7 +52,7 @@ pub fn err(comptime src: std.builtin.SourceLocation, comptime fmt: []const u8, a
 fn log(comptime lvl: Level, comptime loc: Location, comptime fmt: []const u8, args: anytype) void {
     if (level == null or @intFromEnum(lvl) < @intFromEnum(level.?)) return;
 
-    indent(writer);
+    indentConnected(writer);
 
     std.fmt.format(writer, "[{s}] {s}: " ++ fmt ++ "\n", .{ @tagName(lvl), loc.fmt() } ++ args) catch {};
 }
@@ -78,7 +78,11 @@ const Location = struct {
 const alloc = std.heap.page_allocator;
 var indent_size: usize = 0;
 
-fn indent(w: std.io.AnyWriter) void {
+fn indentConnected(w: std.io.AnyWriter) void {
     w.writeBytesNTimes("│ ", indent_size -| 1) catch {};
     if (indent_size > 0) w.writeAll("├╴") catch {};
+}
+
+fn indentDisconnected(w: std.io.AnyWriter) void {
+    w.writeBytesNTimes("│ ", indent_size) catch {};
 }
