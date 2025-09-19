@@ -52,10 +52,15 @@ fn initWayland() !bool {
     log.enter(@src());
     defer log.exit();
 
-    const wayland = Wayland.init() catch return false;
+    const wayland = Wayland.init() catch |e| {
+        log.info(@src(), "Could not connect to wayland compositor ({any}).", .{e});
+        return false;
+    };
 
     if (try initWaylandInputMethod(&wayland)) return true;
     if (try initWaylandVirtualKeyboard(&wayland)) return true;
+
+    log.err(@src(), "No wayland backend supported by the compositor.", .{});
 
     return false;
 }
@@ -71,6 +76,8 @@ fn initWaylandInputMethod(wayland: *const Wayland) !bool {
         },
     };
 
+    log.debug(@src(), "Using WaylandInputMethod backend", .{});
+
     return true;
 }
 
@@ -84,6 +91,8 @@ fn initWaylandVirtualKeyboard(wayland: *const Wayland) !bool {
             else => return e,
         },
     };
+
+    log.debug(@src(), "Using WaylandVirtualKeyboard backend", .{});
 
     return true;
 }

@@ -40,9 +40,11 @@ pub const VirtualKeyboard = struct {
 
         const keycode = charToKeycode(char) orelse return error.KeycodeNotFound;
 
+        log.debug(@src(), "Pressing down key.", .{});
         this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.pressed));
         try this.wayland.roundtrip();
 
+        log.debug(@src(), "Releasing key.", .{});
         this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.released));
         try this.wayland.roundtrip();
     }
@@ -52,7 +54,19 @@ pub const VirtualKeyboard = struct {
         defer log.exit();
 
         const keysym = c.xkb_utf32_to_keysym(char);
-        if (keysym == c.XKB_KEY_NoSymbol) return null;
+        if (keysym == c.XKB_KEY_NoSymbol) {
+            log.debug(@src(), "Char '{u}' does not have an associated keysym.", .{char});
+            return null;
+        }
+
+        const name = blk: {
+            var b: [128]u8 = undefined;
+            const len = c.xkb_keysym_get_name(keysym, &b, b.len);
+            break :blk b[0..@intCast(len)];
+        };
+
+        log.debug(@src(), "Char '{u}' == XKB_KEY_{s} == {d}", .{ char, name, keysym });
+
         return keysym;
     }
 };

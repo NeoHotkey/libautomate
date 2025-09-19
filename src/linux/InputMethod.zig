@@ -38,6 +38,8 @@ pub const InputMethod = struct {
         var string: [4:0]u8 = [4:0]u8{ 0, 0, 0, 0 };
         const len = try std.unicode.wtf8Encode(char, &string);
 
+        log.debug(@src(), "Char '{u}' == WTF-8 string \"{s}\"", .{ char, string[0..len] });
+
         this.input_method.commitString(@ptrCast(string[0..len]));
         this.input_method.commit(0);
     }

@@ -9,7 +9,7 @@ pub const enable_tracing = switch (builtin.mode) {
 
 pub var level: ?Level = switch (builtin.mode) {
     .Debug => .debug,
-    .ReleaseSafe => .info,
+    .ReleaseSafe => .debug,
     .ReleaseFast, .ReleaseSmall => .warn,
 };
 
@@ -54,7 +54,7 @@ fn log(comptime lvl: Level, comptime loc: Location, comptime fmt: []const u8, ar
 
     indentConnected(writer);
 
-    std.fmt.format(writer, "[{s}] {s}: " ++ fmt ++ "\n", .{ @tagName(lvl), loc.fmt() } ++ args) catch {};
+    std.fmt.format(writer, "[{s}] {s}: " ++ fmt ++ "\n", .{ lvl.asText(), loc.fmt() } ++ args) catch {};
 }
 
 const Location = struct {
