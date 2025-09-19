@@ -36,8 +36,6 @@ pub const Wayland = struct {
 
         registry.setListener(*RegistryRequest(Protocol), getHandler(Protocol), &request);
         log.debug(@src(), "Event listener set.", .{});
-        // TODO: is dispatch required?
-        try this.dispatch();
         try this.roundtrip();
 
         if (request.protocol) |proto| {
