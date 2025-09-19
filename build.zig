@@ -4,19 +4,28 @@ const wayland = @import("wayland");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const mod = b.addModule("root", .{
+
+    const log_mod = b.createModule(.{
+        .root_source_file = b.path("src/log.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const root_mod = b.addModule("root", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
         .link_libc = true,
     });
 
-    mod.linkSystemLibrary("wayland-client", .{});
-    mod.linkSystemLibrary("X11", .{});
-    mod.linkSystemLibrary("xkbcommon", .{});
+    root_mod.addImport("log", log_mod);
+
+    root_mod.linkSystemLibrary("wayland-client", .{});
+    root_mod.linkSystemLibrary("X11", .{});
+    root_mod.linkSystemLibrary("xkbcommon", .{});
 
     const scanner: *wayland.Scanner = .create(b, .{});
-    mod.addImport("wayland", b.createModule(.{ .root_source_file = scanner.result }));
+    root_mod.addImport("wayland", b.createModule(.{ .root_source_file = scanner.result }));
 
     scanner.addCustomProtocol(b.path("wayland-protocols/virtual-keyboard-unstable-v1.xml"));
     scanner.addCustomProtocol(b.path("wayland-protocols/input-method-unstable-v2.xml"));
@@ -28,20 +37,20 @@ pub fn build(b: *std.Build) void {
     const static_lib = b.addLibrary(.{
         .linkage = .static,
         .name = "automate",
-        .root_module = mod,
+        .root_module = root_mod,
     });
 
     const dynamic_lib = b.addLibrary(.{
         .linkage = .dynamic,
         .name = "automate",
-        .root_module = mod,
+        .root_module = root_mod,
     });
 
     b.installArtifact(static_lib);
     b.installArtifact(dynamic_lib);
 
-    addWaylandProtocol(mod, "virtual-keyboard-unstable-v1");
-    addWaylandProtocol(mod, "input-method-unstable-v2");
+    addWaylandProtocol(root_mod, "virtual-keyboard-unstable-v1");
+    addWaylandProtocol(root_mod, "input-method-unstable-v2");
 
     const example_exe = b.addExecutable(.{
         .name = "example",
@@ -50,7 +59,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
-    example_exe.root_module.addImport("automate", mod);
+    example_exe.root_module.addImport("automate", root_mod);
 
     b.installArtifact(example_exe);
 
@@ -59,7 +68,7 @@ pub fn build(b: *std.Build) void {
     example_step.dependOn(&example_run.step);
 
     const unit_tests = b.addTest(.{
-        .root_module = mod,
+        .root_module = root_mod,
     });
 
     const run_unit_tests = b.addRunArtifact(unit_tests);
