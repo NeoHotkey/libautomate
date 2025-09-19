@@ -50,7 +50,7 @@ pub fn err(comptime src: std.builtin.SourceLocation, comptime fmt: []const u8, a
 }
 
 fn log(comptime lvl: Level, comptime loc: Location, comptime fmt: []const u8, args: anytype) void {
-    if (level == null or @intFromEnum(lvl) < @intFromEnum(level.?)) return;
+    if (level == null or @intFromEnum(lvl) > @intFromEnum(level.?)) return;
 
     indentConnected(writer);
 
