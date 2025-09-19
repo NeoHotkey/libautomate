@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = @import("log");
 const wl = @import("wayland").client.wl;
 const zwp = @import("wayland").client.zwp;
 const Wayland = @import("Wayland.zig").Wayland;
@@ -11,6 +12,9 @@ pub const VirtualKeyboard = struct {
     keyboard: *zwp.VirtualKeyboardV1,
 
     pub fn init(wayland: *const Wayland) !VirtualKeyboard {
+        log.enter(@src());
+        defer log.exit();
+
         const seat = try wayland.register(wl.Seat, wl.Seat.interface, 7);
         defer seat.destroy();
 
@@ -24,10 +28,16 @@ pub const VirtualKeyboard = struct {
     }
 
     pub fn deinit(this: VirtualKeyboard) void {
+        log.enter(@src());
+        defer log.exit();
+
         this.keyboard.destroy();
     }
 
     pub fn typeCharacter(this: VirtualKeyboard, char: u21) !void {
+        log.enter(@src());
+        defer log.exit();
+
         const keycode = charToKeycode(char) orelse return error.KeycodeNotFound;
 
         this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.pressed));
@@ -38,6 +48,9 @@ pub const VirtualKeyboard = struct {
     }
 
     fn charToKeycode(char: u21) ?c.xkb_keysym_t {
+        log.enter(@src());
+        defer log.exit();
+
         const keysym = c.xkb_utf32_to_keysym(char);
         if (keysym == c.XKB_KEY_NoSymbol) return null;
         return keysym;

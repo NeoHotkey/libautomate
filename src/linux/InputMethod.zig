@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = @import("log");
 const wl = @import("wayland").client.wl;
 const zwp = @import("wayland").client.zwp;
 const Wayland = @import("Wayland.zig").Wayland;
@@ -8,6 +9,9 @@ pub const InputMethod = struct {
     input_method: *zwp.InputMethodV2,
 
     pub fn init(wayland: *const Wayland) !InputMethod {
+        log.enter(@src());
+        defer log.exit();
+
         const seat = try wayland.register(wl.Seat, wl.Seat.interface, 7);
         defer seat.destroy();
 
@@ -21,10 +25,16 @@ pub const InputMethod = struct {
     }
 
     pub fn deinit(this: InputMethod) void {
+        log.enter(@src());
+        defer log.exit();
+
         this.input_method.destroy();
     }
 
     pub fn typeCharacter(this: InputMethod, char: u21) !void {
+        log.enter(@src());
+        defer log.exit();
+
         var string: [4:0]u8 = [4:0]u8{ 0, 0, 0, 0 };
         const len = try std.unicode.wtf8Encode(char, &string);
 

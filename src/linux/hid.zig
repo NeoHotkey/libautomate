@@ -1,4 +1,5 @@
 const std = @import("std");
+const log = @import("log");
 const Input = @import("../Input.zig").Input;
 const InputEvent = @import("../InputEvent.zig").InputEvent;
 const Wayland = @import("Wayland.zig").Wayland;
@@ -14,20 +15,32 @@ const Backend = union(enum) {
 var backend: Backend = .{ .none = {} };
 
 pub fn init() !void {
+    log.enter(@src());
+    defer log.exit();
+
     if (try initWayland()) return;
     if (try initX()) return;
 
     return error.NoSuitableBackendFound;
 }
 
-pub fn deinit() void {}
+pub fn deinit() void {
+    log.enter(@src());
+    defer log.exit();
+}
 
 pub fn sendEvent(event: InputEvent) !void {
+    log.enter(@src());
+    defer log.exit();
+
     _ = event;
     return error.NotYetImplemented;
 }
 
 pub fn typeCharacter(char: u21) !void {
+    log.enter(@src());
+    defer log.exit();
+
     switch (backend) {
         .none => unreachable,
         .wayland_virtual_keyboard => |it| try it.typeCharacter(char),
@@ -36,6 +49,9 @@ pub fn typeCharacter(char: u21) !void {
 }
 
 fn initWayland() !bool {
+    log.enter(@src());
+    defer log.exit();
+
     const wayland = Wayland.init() catch return false;
 
     if (try initWaylandInputMethod(&wayland)) return true;
@@ -45,6 +61,9 @@ fn initWayland() !bool {
 }
 
 fn initWaylandInputMethod(wayland: *const Wayland) !bool {
+    log.enter(@src());
+    defer log.exit();
+
     backend = .{
         .wayland_input_method = InputMethod.init(wayland) catch |e| switch (e) {
             error.ProtocolUnsupported => return false,
@@ -56,6 +75,9 @@ fn initWaylandInputMethod(wayland: *const Wayland) !bool {
 }
 
 fn initWaylandVirtualKeyboard(wayland: *const Wayland) !bool {
+    log.enter(@src());
+    defer log.exit();
+
     backend = .{
         .wayland_virtual_keyboard = VirtualKeyboard.init(wayland) catch |e| switch (e) {
             error.ProtocolUnsupported => return false,
@@ -67,5 +89,8 @@ fn initWaylandVirtualKeyboard(wayland: *const Wayland) !bool {
 }
 
 fn initX() !bool {
+    log.enter(@src());
+    defer log.exit();
+
     return false;
 }
