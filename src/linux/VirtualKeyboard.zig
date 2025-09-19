@@ -8,10 +8,10 @@ const c = @cImport({
 });
 
 pub const VirtualKeyboard = struct {
-    wayland: *const Wayland,
+    wayland: Wayland,
     keyboard: *zwp.VirtualKeyboardV1,
 
-    pub fn init(wayland: *const Wayland) !VirtualKeyboard {
+    pub fn init(wayland: Wayland) !VirtualKeyboard {
         log.enter(@src());
         defer log.exit();
 
@@ -47,6 +47,14 @@ pub const VirtualKeyboard = struct {
         log.debug(@src(), "Releasing key.", .{});
         this.keyboard.key(0, keycode, @intFromEnum(wl.Keyboard.KeyState.released));
         try this.wayland.roundtrip();
+    }
+
+    pub fn typeText(this: VirtualKeyboard, text: []const u8) !void {
+        var iter = (try std.unicode.Utf8View.init(text)).iterator();
+
+        while (iter.nextCodepoint()) |char| {
+            try this.typeCharacter(char);
+        }
     }
 
     fn charToKeycode(char: u21) ?c.xkb_keysym_t {

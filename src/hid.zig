@@ -37,3 +37,10 @@ pub fn typeCharacter(char: u21) !void {
 
     return backend.typeCharacter(char);
 }
+
+pub fn typeText(text: [:0]const u8) !void {
+    log.enter(@src());
+    defer log.exit();
+
+    return backend.typeText(text);
+}

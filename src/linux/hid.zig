@@ -14,6 +14,11 @@ const Backend = union(enum) {
 
 var backend: Backend = .{ .none = {} };
 
+/// For mutable state of backends.
+var data: [128]u8 = undefined;
+var fba: std.heap.FixedBufferAllocator = .init(&data);
+const alloc = fba.allocator();
+
 pub fn init() !void {
     log.enter(@src());
     defer log.exit();
@@ -48,6 +53,17 @@ pub fn typeCharacter(char: u21) !void {
     }
 }
 
+pub fn typeText(text: [:0]const u8) !void {
+    log.enter(@src());
+    defer log.exit();
+
+    switch (backend) {
+        .none => unreachable,
+        .wayland_virtual_keyboard => |it| try it.typeText(text),
+        .wayland_input_method => |it| try it.typeText(text),
+    }
+}
+
 fn initWayland() !bool {
     log.enter(@src());
     defer log.exit();
@@ -57,20 +73,23 @@ fn initWayland() !bool {
         return false;
     };
 
-    if (try initWaylandInputMethod(&wayland)) return true;
-    if (try initWaylandVirtualKeyboard(&wayland)) return true;
+    if (try initWaylandInputMethod(wayland)) return true;
+    if (try initWaylandVirtualKeyboard(wayland)) return true;
 
     log.err(@src(), "No wayland backend supported by the compositor.", .{});
 
     return false;
 }
 
-fn initWaylandInputMethod(wayland: *const Wayland) !bool {
+fn initWaylandInputMethod(wayland: Wayland) !bool {
     log.enter(@src());
     defer log.exit();
 
+    const state = try alloc.create(InputMethod.State);
+    state.* = .initial;
+
     backend = .{
-        .wayland_input_method = InputMethod.init(wayland) catch |e| switch (e) {
+        .wayland_input_method = InputMethod.init(wayland, state) catch |e| switch (e) {
             error.ProtocolUnsupported => return false,
             else => return e,
         },
@@ -81,7 +100,7 @@ fn initWaylandInputMethod(wayland: *const Wayland) !bool {
     return true;
 }
 
-fn initWaylandVirtualKeyboard(wayland: *const Wayland) !bool {
+fn initWaylandVirtualKeyboard(wayland: Wayland) !bool {
     log.enter(@src());
     defer log.exit();
 

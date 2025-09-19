@@ -29,10 +29,12 @@ pub fn build(b: *std.Build) void {
 
     scanner.addCustomProtocol(b.path("wayland-protocols/virtual-keyboard-unstable-v1.xml"));
     scanner.addCustomProtocol(b.path("wayland-protocols/input-method-unstable-v2.xml"));
+    scanner.addCustomProtocol(b.path("wayland-protocols/text-input-unstable-v3.xml"));
 
     scanner.generate("wl_seat", 7);
     scanner.generate("zwp_virtual_keyboard_manager_v1", 1);
     scanner.generate("zwp_input_method_manager_v2", 1);
+    scanner.generate("zwp_text_input_manager_v3", 1);
 
     const static_lib = b.addLibrary(.{
         .linkage = .static,

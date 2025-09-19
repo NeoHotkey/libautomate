@@ -15,5 +15,7 @@
         "src/",
         "license.md",
         "readme.md",
+        "example/",
+        "wayland-protocols/",
     },
 }
