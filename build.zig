@@ -51,9 +51,6 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(static_lib);
     b.installArtifact(dynamic_lib);
 
-    addWaylandProtocol(root_mod, "virtual-keyboard-unstable-v1");
-    addWaylandProtocol(root_mod, "input-method-unstable-v2");
-
     const example_exe = b.addExecutable(.{
         .name = "example",
         .root_source_file = b.path("example/main.zig"),
@@ -77,19 +74,4 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_unit_tests.step);
-}
-
-fn addWaylandProtocol(mod: *std.Build.Module, comptime name: []const u8) void {
-    const b = mod.owner;
-
-    const generate_header = b.addSystemCommand(&.{ "wayland-scanner", "client-header" });
-    generate_header.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
-    const header = generate_header.addOutputFileArg(name ++ "-client-protocol.h");
-
-    const generate_source = b.addSystemCommand(&.{ "wayland-scanner", "private-code" });
-    generate_source.addFileArg(b.path("wayland-protocols/" ++ name ++ ".xml"));
-    const source = generate_source.addOutputFileArg(name ++ "-client-protocol.c");
-
-    mod.addIncludePath(header.dirname());
-    mod.addCSourceFile(.{ .file = source, .language = .c });
 }
